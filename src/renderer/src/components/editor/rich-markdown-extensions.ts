@@ -261,7 +261,6 @@ export function createRichMarkdownExtensions({
         throwOnError: false
       }
     }),
-    RichMarkdownEscapedCharacter,
     createRichMarkdownLiteral(codec.transport),
     ...(htmlSuperscriptLinks
       ? [createRichMarkdownHtmlSuperscriptLink(codec.transport, htmlSuperscriptLinkContext!)]
@@ -276,6 +275,8 @@ export function createRichMarkdownExtensions({
         gfm: true
       }
     }),
+    // Why: wraps the getMarkdown that Markdown's onBeforeCreate installs, so it must follow it.
+    RichMarkdownEscapedCharacter,
     createRichMarkdownAnnotationHighlightExtension()
   ]
 
