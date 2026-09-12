@@ -40,6 +40,7 @@ import { RichMarkdownOrderedList } from './rich-markdown-ordered-list'
 import { RichMarkdownParagraph } from './rich-markdown-paragraph'
 import { RichMarkdownCodeBlockLowlight } from './rich-markdown-lowlight'
 import { RichMarkdownEscapedCharacter } from './rich-markdown-escaped-character'
+import { RichMarkdownSerializerFidelity } from './rich-markdown-serializer-fidelity'
 import { RichMarkdownTaskList } from './rich-markdown-task-list'
 import { createCachedLowlight } from './rich-markdown-lowlight-cache'
 
@@ -67,6 +68,26 @@ const RichMarkdownInlineMath = InlineMath.extend({
         return undefined
       }
       return { type: 'inlineMath', raw: match[0], latex: match[1] }
+    }
+  }
+})
+
+// Why: marked ends a paragraph wherever a block tokenizer's `start` points, so upstream's
+// `indexOf('$$')` split prose at a mid-line `$$`; display math only opens at a line start.
+const RichMarkdownBlockMath = BlockMath.extend({
+  markdownTokenizer: {
+    name: 'blockMath',
+    level: 'block',
+    start: (src: string) => {
+      const index = src.indexOf('\n$$')
+      return index === -1 ? -1 : index + 1
+    },
+    tokenize: (src: string) => {
+      const match = src.match(/^\$\$([^$]+)\$\$/)
+      if (!match) {
+        return undefined
+      }
+      return { type: 'blockMath', raw: match[0], latex: match[1].trim() }
     }
   }
 })
@@ -256,12 +277,13 @@ export function createRichMarkdownExtensions({
         throwOnError: false
       }
     }),
-    BlockMath.configure({
+    RichMarkdownBlockMath.configure({
       katexOptions: {
         displayMode: true,
         throwOnError: false
       }
     }),
+    RichMarkdownEscapedCharacter,
     createRichMarkdownLiteral(codec.transport),
     ...(htmlSuperscriptLinks
       ? [createRichMarkdownHtmlSuperscriptLink(codec.transport, htmlSuperscriptLinkContext!)]
@@ -277,7 +299,7 @@ export function createRichMarkdownExtensions({
       }
     }),
     // Why: wraps the getMarkdown that Markdown's onBeforeCreate installs, so it must follow it.
-    RichMarkdownEscapedCharacter,
+    RichMarkdownSerializerFidelity,
     createRichMarkdownAnnotationHighlightExtension()
   ]
 
