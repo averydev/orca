@@ -73,17 +73,20 @@ const RichMarkdownInlineMath = InlineMath.extend({
 })
 
 // Why: marked ends a paragraph wherever a block tokenizer's `start` points, so upstream's
-// `indexOf('$$')` split prose at a mid-line `$$`; display math only opens at a line start.
+// `indexOf('$$')` split prose at a mid-line `$$`; display math only opens at a (possibly
+// indented) line start, and its body may hold `\$` where upstream's `[^$]+` refused it.
+const BLOCK_MATH_START_PATTERN = /\n[ \t]*\$\$/
+const BLOCK_MATH_PATTERN = /^[ \t]*\$\$((?:(?!\$\$)[\s\S])+?)\$\$/
+
 const RichMarkdownBlockMath = BlockMath.extend({
   markdownTokenizer: {
     name: 'blockMath',
     level: 'block',
-    start: (src: string) => {
-      const index = src.indexOf('\n$$')
-      return index === -1 ? -1 : index + 1
-    },
+    // Why: marked cuts the paragraph at the returned index + 1; pointing at the newline keeps
+    // the indent out of the paragraph and lets the block tokenizer see the whole opener line.
+    start: (src: string) => BLOCK_MATH_START_PATTERN.exec(src)?.index ?? -1,
     tokenize: (src: string) => {
-      const match = src.match(/^\$\$([^$]+)\$\$/)
+      const match = src.match(BLOCK_MATH_PATTERN)
       if (!match) {
         return undefined
       }
