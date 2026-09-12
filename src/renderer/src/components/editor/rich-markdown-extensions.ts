@@ -39,6 +39,7 @@ import type { RichMarkdownHtmlSuperscriptLinkContext } from './rich-markdown-htm
 import { RichMarkdownOrderedList } from './rich-markdown-ordered-list'
 import { RichMarkdownParagraph } from './rich-markdown-paragraph'
 import { RichMarkdownCodeBlockLowlight } from './rich-markdown-lowlight'
+import { RichMarkdownEscapedCharacter } from './rich-markdown-escaped-character'
 import { RichMarkdownTaskList } from './rich-markdown-task-list'
 import { createCachedLowlight } from './rich-markdown-lowlight-cache'
 
@@ -50,11 +51,9 @@ const RichMarkdownLink = Link.extend({
   priority: 90
 })
 
-// Why: upstream treats any same-line `$…$` pair as LaTeX, so "from $10 to $20" or
-// "at $0" became math atoms that also trim the text between the signs. Pandoc's
-// rule keeps money as text: both `$` must touch the formula and the closing one
-// must not be followed by a digit.
-const INLINE_MATH_PATTERN = /^\$(?![\s$])([^$\n]*?[^\s$\\])\$(?!\d)/
+// Why: Pandoc's rule keeps money as text — both `$` must touch the formula and the
+// closing one must not be followed by a digit — where upstream turned "$10 to $20" into math.
+const INLINE_MATH_PATTERN = /^\$(?![\s$])([^$]*?[^\s$])\$(?!\d)/
 
 const RichMarkdownInlineMath = InlineMath.extend({
   markdownTokenizer: {
@@ -66,7 +65,7 @@ const RichMarkdownInlineMath = InlineMath.extend({
       if (!match) {
         return undefined
       }
-      return { type: 'inlineMath', raw: match[0], latex: match[1].trim() }
+      return { type: 'inlineMath', raw: match[0], latex: match[1] }
     }
   }
 })
@@ -262,6 +261,7 @@ export function createRichMarkdownExtensions({
         throwOnError: false
       }
     }),
+    RichMarkdownEscapedCharacter,
     createRichMarkdownLiteral(codec.transport),
     ...(htmlSuperscriptLinks
       ? [createRichMarkdownHtmlSuperscriptLink(codec.transport, htmlSuperscriptLinkContext!)]
