@@ -51,9 +51,10 @@ const RichMarkdownLink = Link.extend({
   priority: 90
 })
 
-// Why: Pandoc's rule keeps money as text — both `$` must touch the formula and the
-// closing one must not be followed by a digit — where upstream turned "$10 to $20" into math.
-const INLINE_MATH_PATTERN = /^\$(?![\s$])([^$]*?[^\s$])\$(?!\d)/
+// Why: Pandoc's rule keeps money as text — both `$` must touch the formula, the closing one
+// must not be followed by a digit, and an escaped `\$` never closes — where upstream turned
+// "$10 to $20" into math.
+const INLINE_MATH_PATTERN = /^\$(?![\s$])((?:\\[\s\S]|[^$\\])*?)(?<!\s)\$(?!\d)/
 
 const RichMarkdownInlineMath = InlineMath.extend({
   markdownTokenizer: {
